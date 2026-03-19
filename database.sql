@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS clients (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   logo VARCHAR(255),
+  website_url VARCHAR(255),
   testimonial TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS careers (
   title VARCHAR(255) NOT NULL,
   department VARCHAR(255),
   location VARCHAR(255),
+  type VARCHAR(50),
   description TEXT,
   requirements TEXT,
   is_active BOOLEAN DEFAULT TRUE,

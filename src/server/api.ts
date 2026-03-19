@@ -355,6 +355,13 @@ router.post('/admin/blogs', authenticateToken, async (req, res) => {
 router.post('/admin/clients', authenticateToken, async (req, res) => {
   const { name, logo, website_url } = req.body;
   await withDb(req, res, async (db) => {
+    // Add website_url column if it doesn't exist yet
+    try {
+      await db.execute('ALTER TABLE clients ADD COLUMN website_url VARCHAR(255)');
+    } catch (e) {
+      // Column might already exist, ignore error
+    }
+    
     await db.execute(
       'INSERT INTO clients (name, logo, website_url) VALUES (?, ?, ?)',
       [name, logo || '', website_url || '']
@@ -367,6 +374,13 @@ router.post('/admin/clients', authenticateToken, async (req, res) => {
 router.post('/admin/careers', authenticateToken, async (req, res) => {
   const { title, department, location, type, description, requirements, is_active } = req.body;
   await withDb(req, res, async (db) => {
+    // Add type column if it doesn't exist yet
+    try {
+      await db.execute('ALTER TABLE careers ADD COLUMN type VARCHAR(50)');
+    } catch (e) {
+      // Column might already exist, ignore error
+    }
+    
     await db.execute(
       'INSERT INTO careers (title, department, location, type, description, requirements, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [title, department || '', location || '', type || '', description || '', requirements || '', is_active === undefined ? true : is_active]
