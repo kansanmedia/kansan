@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '@/src/context/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import { fetchJson } from '../../lib/api';
+import type { LoginResponse } from '../../types/admin';
 
 export function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -21,27 +23,15 @@ export function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const data = await fetchJson<LoginResponse>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
-      });
-
-      let data;
-      try {
-        data = await res.json();
-      } catch (e) {
-        throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
-      }
-
-      if (res.ok) {
-        login(data.token, data.user);
-        navigate('/admin');
-      } else {
-        setError(data.error || data.message || data.details || 'Login failed');
-      }
-    } catch (err: any) {
-      setError(`Error: ${err.message}`);
+      }, 'Login failed');
+      login(data.token, data.user);
+      navigate('/admin');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Login failed');
     } finally {
       setIsLoading(false);
     }
@@ -110,10 +100,6 @@ export function AdminLogin() {
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
-            </div>
-            
-            <div className="text-xs text-center text-gray-500 mt-4">
-              Demo credentials: admin / admin123
             </div>
           </form>
         </div>

@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Download, ExternalLink } from 'lucide-react';
+import { Trash2, ExternalLink } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
+import { adminJson } from '../../lib/api';
+import type { JobApplication } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminJobApplications() {
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
 
   useEffect(() => {
     fetchApplications();
@@ -12,14 +17,12 @@ export function AdminJobApplications() {
 
   const fetchApplications = async () => {
     try {
-      const res = await fetch('/api/admin/job_applications', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch job applications');
-      const data = await res.json();
+      const data = await adminJson<JobApplication[]>('/api/admin/job_applications', {}, 'Failed to fetch job applications');
       setApplications(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch job applications';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -28,22 +31,25 @@ export function AdminJobApplications() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this application?')) return;
     try {
-      const res = await fetch(`/api/admin/job_applications/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/job_applications/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete application');
-      fetchApplications();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete application');
+      await fetchApplications();
+      showSuccess('Application deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete application';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-semibold text-gray-800">Job Applications</h2>
       </div>
@@ -61,7 +67,7 @@ export function AdminJobApplications() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {applications.map((app: any) => (
+            {applications.map((app) => (
               <tr key={app.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">
                   {app.applicant_name}

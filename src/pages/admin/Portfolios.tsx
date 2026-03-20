@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
 import { ImageUpload } from '../../components/ImageUpload';
+import { adminJson } from '../../lib/api';
+import type { Portfolio } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminPortfolios() {
-  const [portfolios, setPortfolios] = useState([]);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ title: '', slug: '', description: '', client_name: '', image: '', website_url: '' });
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ title: '', slug: '', description: '', client_name: '', image: '', website_url: '' });
+  };
 
   useEffect(() => {
     fetchPortfolios();
@@ -15,14 +27,12 @@ export function AdminPortfolios() {
 
   const fetchPortfolios = async () => {
     try {
-      const res = await fetch('/api/admin/portfolios', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch portfolios');
-      const data = await res.json();
+      const data = await adminJson<Portfolio[]>('/api/admin/portfolios', {}, 'Failed to fetch portfolios');
       setPortfolios(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch portfolios';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -31,46 +41,63 @@ export function AdminPortfolios() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/portfolios', {
-        method: 'POST',
+      setError('');
+      await adminJson<{ success: boolean }>(editingId ? `/api/admin/portfolios/${editingId}` : '/api/admin/portfolios', {
+        method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         },
         body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Failed to create portfolio');
-      setIsAdding(false);
-      setFormData({ title: '', slug: '', description: '', client_name: '', image: '', website_url: '' });
-      fetchPortfolios();
-    } catch (err: any) {
-      alert(err.message);
+      }, editingId ? 'Failed to update portfolio' : 'Failed to create portfolio');
+      resetForm();
+      await fetchPortfolios();
+      showSuccess(editingId ? 'Portfolio updated successfully' : 'Portfolio created successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to save portfolio';
+      setError(text);
+      showError(text);
     }
+  };
+
+  const handleEdit = (portfolio: Portfolio) => {
+    setEditingId(portfolio.id);
+    setIsAdding(true);
+    setFormData({
+      title: portfolio.title,
+      slug: portfolio.slug,
+      description: portfolio.description,
+      client_name: portfolio.client_name || '',
+      image: portfolio.image || '',
+      website_url: portfolio.website_url || '',
+    });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this portfolio?')) return;
     try {
-      const res = await fetch(`/api/admin/portfolios/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/portfolios/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete portfolio');
-      fetchPortfolios();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete portfolio');
+      await fetchPortfolios();
+      showSuccess('Portfolio deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete portfolio';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Manage Portfolios</h2>
         <button
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="h-4 w-4" /> {isAdding ? 'Cancel' : 'Add Portfolio'}
@@ -133,9 +160,10 @@ export function AdminPortfolios() {
               value={formData.image} 
               onChange={(url) => setFormData({ ...formData, image: url })} 
               label="Portfolio Image"
+              uploadName={formData.title || 'portfolio-image'}
             />
             <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Save Portfolio
+              {editingId ? 'Update Portfolio' : 'Save Portfolio'}
             </button>
           </form>
         </div>
@@ -151,11 +179,14 @@ export function AdminPortfolios() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {portfolios.map((portfolio: any) => (
+            {portfolios.map((portfolio) => (
               <tr key={portfolio.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{portfolio.title}</td>
                 <td className="p-4 text-gray-500">{portfolio.client_name}</td>
                 <td className="p-4 text-right">
+                  <button onClick={() => handleEdit(portfolio)} className="text-blue-500 hover:text-blue-700 p-2">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => handleDelete(portfolio.id)} className="text-red-500 hover:text-red-700 p-2">
                     <Trash2 className="h-4 w-4" />
                   </button>

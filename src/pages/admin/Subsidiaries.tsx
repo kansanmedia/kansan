@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
+import { adminJson } from '../../lib/api';
+import type { Subsidiary } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminSubsidiaries() {
-  const [subsidiaries, setSubsidiaries] = useState([]);
+  const [subsidiaries, setSubsidiaries] = useState<Subsidiary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '', website_url: '', logo: '' });
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ name: '', description: '', website_url: '', logo: '' });
+  };
 
   useEffect(() => {
     fetchSubsidiaries();
@@ -14,14 +26,12 @@ export function AdminSubsidiaries() {
 
   const fetchSubsidiaries = async () => {
     try {
-      const res = await fetch('/api/admin/subsidiaries', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch subsidiaries');
-      const data = await res.json();
+      const data = await adminJson<Subsidiary[]>('/api/admin/subsidiaries', {}, 'Failed to fetch subsidiaries');
       setSubsidiaries(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch subsidiaries';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -30,46 +40,61 @@ export function AdminSubsidiaries() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/subsidiaries', {
-        method: 'POST',
+      setError('');
+      await adminJson<{ success: boolean }>(editingId ? `/api/admin/subsidiaries/${editingId}` : '/api/admin/subsidiaries', {
+        method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         },
         body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Failed to create subsidiary');
-      setIsAdding(false);
-      setFormData({ name: '', description: '', website_url: '', logo: '' });
-      fetchSubsidiaries();
-    } catch (err: any) {
-      alert(err.message);
+      }, editingId ? 'Failed to update subsidiary' : 'Failed to create subsidiary');
+      resetForm();
+      await fetchSubsidiaries();
+      showSuccess(editingId ? 'Subsidiary updated successfully' : 'Subsidiary created successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to save subsidiary';
+      setError(text);
+      showError(text);
     }
+  };
+
+  const handleEdit = (subsidiary: Subsidiary) => {
+    setEditingId(subsidiary.id);
+    setIsAdding(true);
+    setFormData({
+      name: subsidiary.name,
+      description: subsidiary.description,
+      website_url: subsidiary.website_url || '',
+      logo: subsidiary.logo || '',
+    });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this subsidiary?')) return;
     try {
-      const res = await fetch(`/api/admin/subsidiaries/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/subsidiaries/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete subsidiary');
-      fetchSubsidiaries();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete subsidiary');
+      await fetchSubsidiaries();
+      showSuccess('Subsidiary deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete subsidiary';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Manage Subsidiaries</h2>
         <button
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="h-4 w-4" /> {isAdding ? 'Cancel' : 'Add Subsidiary'}
@@ -109,7 +134,7 @@ export function AdminSubsidiaries() {
               ></textarea>
             </div>
             <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Save Subsidiary
+              {editingId ? 'Update Subsidiary' : 'Save Subsidiary'}
             </button>
           </form>
         </div>
@@ -125,13 +150,16 @@ export function AdminSubsidiaries() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {subsidiaries.map((sub: any) => (
+            {subsidiaries.map((sub) => (
               <tr key={sub.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{sub.name}</td>
                 <td className="p-4 text-blue-600 hover:underline">
                   {sub.website_url && <a href={sub.website_url} target="_blank" rel="noreferrer">{sub.website_url}</a>}
                 </td>
                 <td className="p-4 text-right">
+                  <button onClick={() => handleEdit(sub)} className="text-blue-500 hover:text-blue-700 p-2">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => handleDelete(sub.id)} className="text-red-500 hover:text-red-700 p-2">
                     <Trash2 className="h-4 w-4" />
                   </button>

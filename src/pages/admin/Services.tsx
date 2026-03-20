@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
 import { ImageUpload } from '../../components/ImageUpload';
+import { adminJson } from '../../lib/api';
+import type { Service } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminServices() {
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ title: '', slug: '', description: '', icon: '', image: '' });
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ title: '', slug: '', description: '', icon: '', image: '' });
+  };
 
   useEffect(() => {
     fetchServices();
@@ -15,14 +27,12 @@ export function AdminServices() {
 
   const fetchServices = async () => {
     try {
-      const res = await fetch('/api/admin/services', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch services');
-      const data = await res.json();
+      const data = await adminJson<Service[]>('/api/admin/services', {}, 'Failed to fetch services');
       setServices(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch services';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -31,46 +41,62 @@ export function AdminServices() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/services', {
-        method: 'POST',
+      setError('');
+      await adminJson<{ success: boolean }>(editingId ? `/api/admin/services/${editingId}` : '/api/admin/services', {
+        method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         },
         body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Failed to create service');
-      setIsAdding(false);
-      setFormData({ title: '', slug: '', description: '', icon: '', image: '' });
-      fetchServices();
-    } catch (err: any) {
-      alert(err.message);
+      }, editingId ? 'Failed to update service' : 'Failed to create service');
+      resetForm();
+      await fetchServices();
+      showSuccess(editingId ? 'Service updated successfully' : 'Service created successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to save service';
+      setError(text);
+      showError(text);
     }
+  };
+
+  const handleEdit = (service: Service) => {
+    setEditingId(service.id);
+    setIsAdding(true);
+    setFormData({
+      title: service.title,
+      slug: service.slug,
+      description: service.description,
+      icon: service.icon || '',
+      image: service.image || '',
+    });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this service?')) return;
     try {
-      const res = await fetch(`/api/admin/services/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/services/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete service');
-      fetchServices();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete service');
+      await fetchServices();
+      showSuccess('Service deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete service';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Manage Services</h2>
         <button
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="h-4 w-4" /> {isAdding ? 'Cancel' : 'Add Service'}
@@ -114,9 +140,10 @@ export function AdminServices() {
               value={formData.image} 
               onChange={(url) => setFormData({ ...formData, image: url })} 
               label="Service Image"
+              uploadName={formData.title || 'service-image'}
             />
             <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Save Service
+              {editingId ? 'Update Service' : 'Save Service'}
             </button>
           </form>
         </div>
@@ -132,11 +159,14 @@ export function AdminServices() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {services.map((service: any) => (
+            {services.map((service) => (
               <tr key={service.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{service.title}</td>
                 <td className="p-4 text-gray-500">{service.slug}</td>
                 <td className="p-4 text-right">
+                  <button onClick={() => handleEdit(service)} className="text-blue-500 hover:text-blue-700 p-2">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => handleDelete(service.id)} className="text-red-500 hover:text-red-700 p-2">
                     <Trash2 className="h-4 w-4" />
                   </button>

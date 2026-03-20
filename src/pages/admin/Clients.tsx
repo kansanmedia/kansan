@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
+import { adminJson } from '../../lib/api';
+import type { Client } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminClients() {
-  const [clients, setClients] = useState([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ name: '', logo: '', website_url: '' });
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ name: '', logo: '', website_url: '' });
+  };
 
   useEffect(() => {
     fetchClients();
@@ -14,14 +26,12 @@ export function AdminClients() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch('/api/admin/clients', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch clients');
-      const data = await res.json();
+      const data = await adminJson<Client[]>('/api/admin/clients', {}, 'Failed to fetch clients');
       setClients(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch clients';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -30,46 +40,60 @@ export function AdminClients() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/clients', {
-        method: 'POST',
+      setError('');
+      await adminJson<{ success: boolean }>(editingId ? `/api/admin/clients/${editingId}` : '/api/admin/clients', {
+        method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         },
         body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Failed to create client');
-      setIsAdding(false);
-      setFormData({ name: '', logo: '', website_url: '' });
-      fetchClients();
-    } catch (err: any) {
-      alert(err.message);
+      }, editingId ? 'Failed to update client' : 'Failed to create client');
+      resetForm();
+      await fetchClients();
+      showSuccess(editingId ? 'Client updated successfully' : 'Client created successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to save client';
+      setError(text);
+      showError(text);
     }
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingId(client.id);
+    setIsAdding(true);
+    setFormData({
+      name: client.name,
+      logo: client.logo || '',
+      website_url: client.website_url || '',
+    });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this client?')) return;
     try {
-      const res = await fetch(`/api/admin/clients/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/clients/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete client');
-      fetchClients();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete client');
+      await fetchClients();
+      showSuccess('Client deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete client';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Manage Clients</h2>
         <button
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
         >
           <Plus className="h-4 w-4" /> {isAdding ? 'Cancel' : 'Add Client'}
@@ -108,7 +132,7 @@ export function AdminClients() {
               />
             </div>
             <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Save Client
+              {editingId ? 'Update Client' : 'Save Client'}
             </button>
           </form>
         </div>
@@ -124,13 +148,16 @@ export function AdminClients() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {clients.map((client: any) => (
+            {clients.map((client) => (
               <tr key={client.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{client.name}</td>
                 <td className="p-4 text-blue-600 hover:underline">
                   {client.website_url && <a href={client.website_url} target="_blank" rel="noreferrer">{client.website_url}</a>}
                 </td>
                 <td className="p-4 text-right">
+                  <button onClick={() => handleEdit(client)} className="text-blue-500 hover:text-blue-700 p-2">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => handleDelete(client.id)} className="text-red-500 hover:text-red-700 p-2">
                     <Trash2 className="h-4 w-4" />
                   </button>

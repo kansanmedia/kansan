@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AdminActionToast } from '../../components/AdminActionToast';
+import { adminJson } from '../../lib/api';
+import type { Career } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminCareers() {
-  const [careers, setCareers] = useState([]);
+  const [careers, setCareers] = useState<Career[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ title: '', department: '', location: '', type: '', description: '', requirements: '', is_active: true });
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ title: '', department: '', location: '', type: '', description: '', requirements: '', is_active: true });
+  };
 
   useEffect(() => {
     fetchCareers();
@@ -15,14 +27,12 @@ export function AdminCareers() {
 
   const fetchCareers = async () => {
     try {
-      const res = await fetch('/api/admin/careers', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch careers');
-      const data = await res.json();
+      const data = await adminJson<Career[]>('/api/admin/careers', {}, 'Failed to fetch careers');
       setCareers(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch careers';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -31,42 +41,60 @@ export function AdminCareers() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/careers', {
-        method: 'POST',
+      setError('');
+      await adminJson<{ success: boolean }>(editingId ? `/api/admin/careers/${editingId}` : '/api/admin/careers', {
+        method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         },
         body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Failed to create career');
-      setIsAdding(false);
-      setFormData({ title: '', department: '', location: '', type: '', description: '', requirements: '', is_active: true });
-      fetchCareers();
-    } catch (err: any) {
-      alert(err.message);
+      }, editingId ? 'Failed to update career' : 'Failed to create career');
+      resetForm();
+      await fetchCareers();
+      showSuccess(editingId ? 'Career updated successfully' : 'Career created successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to save career';
+      setError(text);
+      showError(text);
     }
+  };
+
+  const handleEdit = (career: Career) => {
+    setEditingId(career.id);
+    setIsAdding(true);
+    setFormData({
+      title: career.title,
+      department: career.department || '',
+      location: career.location || '',
+      type: career.type || '',
+      description: career.description || '',
+      requirements: career.requirements || '',
+      is_active: career.is_active,
+    });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this career?')) return;
     try {
-      const res = await fetch(`/api/admin/careers/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/careers/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete career');
-      fetchCareers();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete career');
+      await fetchCareers();
+      showSuccess('Career deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete career';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Manage Careers</h2>
         <div className="flex gap-3">
@@ -77,7 +105,7 @@ export function AdminCareers() {
             <Users className="h-4 w-4" /> View Applications
           </Link>
           <button
-            onClick={() => setIsAdding(!isAdding)}
+            onClick={() => isAdding ? resetForm() : setIsAdding(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
           >
             <Plus className="h-4 w-4" /> {isAdding ? 'Cancel' : 'Add Career'}
@@ -129,7 +157,7 @@ export function AdminCareers() {
               ></textarea>
             </div>
             <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Save Career
+              {editingId ? 'Update Career' : 'Save Career'}
             </button>
           </form>
         </div>
@@ -146,12 +174,15 @@ export function AdminCareers() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {careers.map((career: any) => (
+            {careers.map((career) => (
               <tr key={career.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{career.title}</td>
                 <td className="p-4 text-gray-500">{career.department}</td>
                 <td className="p-4 text-gray-500">{career.location}</td>
                 <td className="p-4 text-right">
+                  <button onClick={() => handleEdit(career)} className="text-blue-500 hover:text-blue-700 p-2">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => handleDelete(career.id)} className="text-red-500 hover:text-red-700 p-2">
                     <Trash2 className="h-4 w-4" />
                   </button>

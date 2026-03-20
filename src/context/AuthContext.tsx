@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { fetchJson } from '../lib/api';
+import type { AdminUser } from '../types/admin';
 
 interface AuthContextType {
   token: string | null;
-  user: any | null;
-  login: (token: string, user: any) => void;
+  user: AdminUser | null;
+  login: (token: string, user: AdminUser) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -12,14 +14,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem('admin_token'));
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     if (token) {
-      fetch('/api/auth/verify', {
+      fetchJson<{ user?: AdminUser }>('/api/auth/verify', {
         headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
+      }, 'Failed to verify session')
       .then(data => {
         if (data.user) {
           setUser(data.user);
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
-  const login = (newToken: string, newUser: any) => {
+  const login = (newToken: string, newUser: AdminUser) => {
     localStorage.setItem('admin_token', newToken);
     setToken(newToken);
     setUser(newUser);

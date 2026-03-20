@@ -19,7 +19,9 @@ async function startServer() {
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   // API Routes
+  console.log('Loading API routes...');
   app.use('/api', apiRoutes);
+  console.log('API routes loaded');
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

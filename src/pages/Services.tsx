@@ -17,7 +17,7 @@ export function Services() {
 
   return (
     <div className="py-20 bg-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[80%] mx-auto px-4">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Services</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -28,22 +28,12 @@ export function Services() {
         {loading ? (
           <div className="text-center py-12">Loading services...</div>
         ) : services.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service: any, index) => (
-              <motion.div 
-                key={service.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                id={service.slug}
-                className="bg-gray-50 p-8 rounded-xl border border-gray-100 hover:shadow-lg transition-shadow"
-              >
-                {service.image && (
-                  <img src={service.image} alt={service.title} className="w-full h-48 object-cover rounded-lg mb-6" referrerPolicy="no-referrer" loading="lazy" />
-                )}
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{service.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{service.description}</p>
-              </motion.div>
+          <div className="flex flex-wrap justify-center gap-8 text-left">
+            {services.map((service: any) => (
+              <div key={service.id} id={service.slug} className="w-72 bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex-shrink-0">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{service.title}</h3>
+                <p className="text-gray-600 line-clamp-4">{service.description}</p>
+              </div>
             ))}
           </div>
         ) : (

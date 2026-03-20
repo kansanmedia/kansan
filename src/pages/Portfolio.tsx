@@ -18,7 +18,7 @@ export function Portfolio() {
 
   return (
     <div className="py-20 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[80%] mx-auto px-4">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Portfolio</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -29,15 +29,9 @@ export function Portfolio() {
         {loading ? (
           <div className="text-center py-12">Loading portfolio...</div>
         ) : portfolios.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {portfolios.map((item: any, index) => (
-              <motion.div 
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                className="h-full"
-              >
+          <div className="flex flex-wrap justify-center gap-8">
+            {portfolios.map((item: any) => (
+              <div key={item.id} className="w-80 flex-shrink-0">
                 {item.website_url ? (
                   <OGCard 
                     url={item.website_url}
@@ -46,20 +40,17 @@ export function Portfolio() {
                     fallbackImage={item.image}
                   />
                 ) : (
-                  <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all h-full flex flex-col">
-                    {item.image ? (
-                      <img src={item.image} alt={item.title} className="w-full h-64 object-cover" referrerPolicy="no-referrer" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-64 bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
+                  <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full">
+                    {item.image && (
+                      <img src={item.image} alt={item.title} className="w-full h-40 object-cover" loading="lazy" />
                     )}
-                    <div className="p-6 flex-grow">
-                      <div className="text-sm text-blue-600 font-semibold mb-2">{item.client_name}</div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
-                      <p className="text-gray-600 line-clamp-3">{item.description}</p>
+                    <div className="p-4 flex flex-col flex-grow">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">{item.description}</p>
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (

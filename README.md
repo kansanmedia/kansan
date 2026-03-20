@@ -1,20 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Kansan Group
 
-# Run and deploy your AI Studio app
+React + Vite frontend with an Express API and MySQL-backed admin CMS.
 
-This contains everything you need to run your app locally.
+## Prerequisites
 
-View your app in AI Studio: https://ai.studio/apps/41ab6bef-a4a3-420c-9291-318a7511b22f
+- Node.js 20+
+- MySQL database
 
-## Run Locally
+## Setup
 
-**Prerequisites:**  Node.js
+1. Install dependencies with `npm install`
+2. Configure the environment in `.env`
+3. Start the app with `npm run dev`
 
+The server runs the API and Vite middleware on the same port.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Available Scripts
+
+- `npm run dev` starts the local server
+- `npm run build` creates the production frontend build
+- `npm run lint` runs TypeScript checks
+- `npm run clean` removes `dist`
+
+## Environment Variables
+
+- `PORT`
+- `NODE_ENV`
+- `JWT_SECRET`
+- `DB_HOST`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `ENABLE_DB_INIT=true` only when you intentionally want the database init route enabled

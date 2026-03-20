@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/src/context/AuthContext';
 import { Briefcase, FileText, ImageIcon, Mail } from 'lucide-react';
+import { adminJson } from '../../lib/api';
+import type { DashboardStats } from '../../types/admin';
 
 export function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     services: 0,
     portfolios: 0,
     blogs: 0,
@@ -13,18 +15,11 @@ export function Dashboard() {
   const { token } = useAuth();
 
   useEffect(() => {
-    fetch('/api/admin/stats', {
+    adminJson<DashboardStats>('/api/admin/stats', {
       headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch stats');
-        return res.json();
-      })
-      .then(data => {
-        if (data.error) throw new Error(data.error);
-        setStats(data);
-      })
-      .catch(err => setError(err.message));
+    }, 'Failed to fetch stats')
+      .then(setStats)
+      .catch(error => setError(error instanceof Error ? error.message : 'Failed to fetch stats'));
   }, [token]);
 
   const statCards = [
@@ -39,7 +34,7 @@ export function Dashboard() {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
           {error === 'Database not configured' 
-            ? 'Database is not configured. Please set up MySQL credentials in AI Studio Secrets.'
+            ? 'Database is not configured. Please set valid MySQL credentials in your environment settings.'
             : error}
         </div>
       )}

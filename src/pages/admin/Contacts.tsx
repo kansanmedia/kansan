@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
+import { AdminActionToast } from '../../components/AdminActionToast';
+import { adminJson } from '../../lib/api';
+import type { ContactLead } from '../../types/admin';
+import { useActionMessage } from '../../hooks/useActionMessage';
 
 export function AdminContacts() {
-  const [contacts, setContacts] = useState([]);
+  const [contacts, setContacts] = useState<ContactLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { message, showSuccess, showError } = useActionMessage();
 
   useEffect(() => {
     fetchContacts();
@@ -12,14 +17,12 @@ export function AdminContacts() {
 
   const fetchContacts = async () => {
     try {
-      const res = await fetch('/api/admin/contacts', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch contacts');
-      const data = await res.json();
+      const data = await adminJson<ContactLead[]>('/api/admin/contacts', {}, 'Failed to fetch contacts');
       setContacts(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to fetch contacts';
+      setError(text);
+      showError(text);
     } finally {
       setLoading(false);
     }
@@ -28,22 +31,25 @@ export function AdminContacts() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this contact?')) return;
     try {
-      const res = await fetch(`/api/admin/contacts/${id}`, {
+      setError('');
+      await adminJson<{ success: boolean }>(`/api/admin/contacts/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete contact');
-      fetchContacts();
-    } catch (err: any) {
-      alert(err.message);
+      }, 'Failed to delete contact');
+      await fetchContacts();
+      showSuccess('Contact deleted successfully');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'Failed to delete contact';
+      setError(text);
+      showError(text);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <AdminActionToast type={message.type} text={message.text} />
+      {error && <div className="mx-6 mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-semibold text-gray-800">Contact Leads</h2>
       </div>
@@ -60,7 +66,7 @@ export function AdminContacts() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {contacts.map((contact: any) => (
+            {contacts.map((contact) => (
               <tr key={contact.id} className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{contact.name}</td>
                 <td className="p-4 text-gray-500">{contact.email}</td>
