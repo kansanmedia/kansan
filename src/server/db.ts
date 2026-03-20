@@ -12,6 +12,13 @@ const parseBoolean = (value: string | undefined) =>
   typeof value === 'string' && ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 
 async function ensureDatabaseReady(db: mysql.Pool) {
+  // Skip SQL file migrations in Vercel serverless / production environments.
+  // SQL files are not present in Vercel's read-only filesystem.
+  // Run migrations manually via phpMyAdmin or a local migration script.
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return;
+  }
+
   if (!migrationPromise) {
     migrationPromise = (async () => {
       const sqlFiles = ['database.sql', 'migration_v1.sql'];
