@@ -10,6 +10,15 @@ export function Footer() {
   const [navItems, setNavItems] = useState<NavigationItem[]>([]);
   const [subsidiaries, setSubsidiaries] = useState<Subsidiary[]>([]);
 
+  const hasSettingValue = (key: string) => Boolean(settings && Object.prototype.hasOwnProperty.call(settings, key));
+  const getSettingValue = (key: string, fallback: string) => {
+    if (!hasSettingValue(key)) {
+      return fallback;
+    }
+
+    return settings![key];
+  };
+
   useEffect(() => {
     fetchJson<NavigationItem[]>('/api/footer-links', {}, 'Failed to fetch footer links')
       .then((data) => setNavItems(data))
@@ -27,13 +36,18 @@ export function Footer() {
       .catch(() => setSubsidiaries([]));
   }, []);
 
-  const footerDescription =
-    settings?.footer_description ||
-    'Empowering businesses through innovative solutions and strategic investments across multiple sectors.';
+  const footerDescription = getSettingValue(
+    'footer_description',
+    'Empowering businesses through innovative solutions and strategic investments across multiple sectors.'
+  );
   const defaultQuickLinkUrls = ['/about', '/services', '/portfolio', '/contact'];
   const configuredQuickLinkUrls = (() => {
+    if (!hasSettingValue('footer_quick_links')) {
+      return defaultQuickLinkUrls;
+    }
+
     try {
-      const parsed = JSON.parse(settings?.footer_quick_links || '[]');
+      const parsed = JSON.parse(settings?.footer_quick_links ?? '[]');
       return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
     } catch {
       return [];
@@ -49,21 +63,19 @@ export function Footer() {
             { label: 'Portfolio', url: '/portfolio', is_enabled: true, display_order: 3 },
             { label: 'Contact', url: '/contact', is_enabled: true, display_order: 4 },
           ];
-
-    const targetUrls = configuredQuickLinkUrls.length > 0 ? configuredQuickLinkUrls : defaultQuickLinkUrls;
-    const resolved = targetUrls
+    const resolved = configuredQuickLinkUrls
       .map((url) => sourceItems.find((item) => item.url === url))
       .filter((item): item is NavigationItem => Boolean(item));
 
-    return resolved.length > 0 ? resolved : sourceItems.slice(0, 4);
+    return resolved;
   })();
-  const quickLinksTitle = settings?.footer_quick_links_title || 'Quick Links';
-  const subsidiariesTitle = settings?.footer_subsidiaries_title || 'Subsidiaries';
-  const contactTitle = settings?.footer_contact_title || 'Contact Us';
-  const footerAddress = settings?.footer_address || '123 Corporate Blvd, Suite 500\nBusiness District, NY 10001';
-  const footerPhone = settings?.footer_phone || '+1 (555) 123-4567';
-  const footerEmail = settings?.footer_email || 'info@kansangroup.com';
-  const footerAdminLabel = settings?.footer_admin_label || 'Admin Portal';
+  const quickLinksTitle = getSettingValue('footer_quick_links_title', 'Quick Links');
+  const subsidiariesTitle = getSettingValue('footer_subsidiaries_title', 'Subsidiaries');
+  const contactTitle = getSettingValue('footer_contact_title', 'Contact Us');
+  const footerAddress = getSettingValue('footer_address', '123 Corporate Blvd, Suite 500\nBusiness District, NY 10001');
+  const footerPhone = getSettingValue('footer_phone', '+1 (555) 123-4567');
+  const footerEmail = getSettingValue('footer_email', 'info@kansangroup.com');
+  const footerAdminLabel = getSettingValue('footer_admin_label', 'Admin Portal');
   const phoneHref = `tel:${footerPhone.replace(/[^\d+]/g, '')}`;
   const emailHref = `mailto:${footerEmail}`;
   
@@ -75,11 +87,11 @@ export function Footer() {
           <div className="md:pr-4">
             <div className="flex items-center gap-2 mb-4">
               {settings?.site_logo ? (
-                <img src={settings.site_logo} alt={settings.site_title || 'Kansan Group'} className="h-10 w-auto object-contain" />
+                <img src={settings.site_logo} alt={getSettingValue('site_title', 'Kansan Group')} className="h-10 w-auto object-contain" />
               ) : (
                 <>
                   <Building2 className="h-8 w-8 text-blue-400" />
-                  <span className="text-shine font-bold text-xl">{settings?.site_title || 'Kansan Group'}</span>
+                  <span className="text-shine font-bold text-xl">{getSettingValue('site_title', 'Kansan Group')}</span>
                 </>
               )}
             </div>
@@ -91,13 +103,17 @@ export function Footer() {
           <div>
             <h3 className="mb-4 border-b border-white/10 pb-3 font-semibold text-lg text-slate-100">{quickLinksTitle}</h3>
             <ul className="space-y-2 text-sm text-gray-400">
-              {footerQuickLinks.map((item) => (
-                <li key={item.label}>
-                  <Link to={item.url} className="inline-flex items-center gap-2 transition-colors hover:text-blue-300">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+              {footerQuickLinks.length > 0 ? (
+                footerQuickLinks.map((item) => (
+                  <li key={item.label}>
+                    <Link to={item.url} className="inline-flex items-center gap-2 transition-colors hover:text-blue-300">
+                      {item.label}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li>No quick links configured.</li>
+              )}
             </ul>
           </div>
 
@@ -152,7 +168,7 @@ export function Footer() {
 
         <div className="flex flex-col items-center justify-between gap-4 pt-2 md:flex-row">
           <p className="text-sm text-gray-400">
-            {settings?.footer_copyright || `© ${new Date().getFullYear()} Kansan Group. All rights reserved.`}
+            {getSettingValue('footer_copyright', `© ${new Date().getFullYear()} Kansan Group. All rights reserved.`)}
           </p>
           <div className="flex gap-4 text-sm text-gray-400">
             <Link to="/admin/login" className="transition-colors hover:text-blue-300">{footerAdminLabel}</Link>

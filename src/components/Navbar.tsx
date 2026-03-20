@@ -14,6 +14,14 @@ export function Navbar() {
   const { settings } = useSettings();
   const [navItems, setNavItems] = useState<NavigationItem[]>([]);
 
+  const getSettingValue = (key: string, fallback: string) => {
+    if (!settings || !Object.prototype.hasOwnProperty.call(settings, key)) {
+      return fallback;
+    }
+
+    return settings[key];
+  };
+
   useEffect(() => {
     // Fetch dynamic navigation
     fetchJson<NavigationItem[]>('/api/navigation', {}, 'Failed to fetch navigation')
@@ -54,12 +62,12 @@ export function Navbar() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
               {settings?.site_logo ? (
-                <img src={settings.site_logo} alt={settings.site_title || 'Kansan Group'} className="h-10 w-auto object-contain" />
+                <img src={settings.site_logo} alt={getSettingValue('site_title', 'Kansan Group')} className="h-10 w-auto object-contain" />
               ) : (
                 <>
                   <Building2 className="h-8 w-8 text-blue-600" />
                   <span className="text-shine text-xl font-bold tracking-tight">
-                    {settings?.site_title || 'Kansan Group'}
+                    {getSettingValue('site_title', 'Kansan Group')}
                   </span>
                 </>
               )}

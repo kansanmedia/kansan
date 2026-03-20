@@ -32,6 +32,14 @@ export function Home() {
   const [dbError, setDbError] = useState<string | null>(null);
   const { settings } = useSettings();
 
+  const getSettingValue = (key: string, fallback: string) => {
+    if (!settings || !Object.prototype.hasOwnProperty.call(settings, key)) {
+      return fallback;
+    }
+
+    return settings[key];
+  };
+
   useEffect(() => {
     fetchJson<any[]>('/api/homepage-sections', {}, 'Failed to fetch homepage sections')
       .then((data) => {
@@ -71,17 +79,19 @@ export function Home() {
       .finally(() => setCollectionsLoading(false));
   }, []);
 
-  const heroTitle = settings?.hero_title || 'Building the Future of Global Enterprise';
-  const heroDescription =
-    settings?.hero_description ||
-    'Kansan Group is a diversified holding company driving innovation and sustainable growth across technology, real estate, and logistics sectors.';
-  const heroImage =
-    settings?.hero_image ||
-    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop';
-  const heroPrimaryLabel = settings?.hero_primary_label || 'Explore Services';
-  const heroPrimaryLink = settings?.hero_primary_link || '/services';
-  const heroSecondaryLabel = settings?.hero_secondary_label || 'Contact Us';
-  const heroSecondaryLink = settings?.hero_secondary_link || '/contact';
+  const heroTitle = getSettingValue('hero_title', 'Building the Future of Global Enterprise');
+  const heroDescription = getSettingValue(
+    'hero_description',
+    'Kansan Group is a diversified holding company driving innovation and sustainable growth across technology, real estate, and logistics sectors.'
+  );
+  const heroImage = getSettingValue(
+    'hero_image',
+    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop'
+  );
+  const heroPrimaryLabel = getSettingValue('hero_primary_label', 'Explore Services');
+  const heroPrimaryLink = getSettingValue('hero_primary_link', '/services');
+  const heroSecondaryLabel = getSettingValue('hero_secondary_label', 'Contact Us');
+  const heroSecondaryLink = getSettingValue('hero_secondary_link', '/contact');
 
   const renderSectionHeading = (title: string, description: string) => (
     <div className="mb-10 text-center md:mb-12">
@@ -210,23 +220,23 @@ export function Home() {
         const stats = [
           {
             icon: Building2,
-            label: settings?.stats_subsidiaries_label || 'Subsidiaries',
+            label: getSettingValue('stats_subsidiaries_label', 'Subsidiaries'),
             value: String(subsidiaries.length),
           },
           {
             icon: Globe,
-            label: settings?.stats_clients_label || 'Clients',
+            label: getSettingValue('stats_clients_label', 'Clients'),
             value: String(clients.length),
           },
           {
             icon: Users,
-            label: settings?.stats_employees_label || 'Employees',
-            value: settings?.stats_employees_value || '0',
+            label: getSettingValue('stats_employees_label', 'Employees'),
+            value: getSettingValue('stats_employees_value', '0'),
           },
           {
             icon: TrendingUp,
-            label: settings?.stats_experience_label || 'Years Experience',
-            value: settings?.stats_experience_value || '0',
+            label: getSettingValue('stats_experience_label', 'Years Experience'),
+            value: getSettingValue('stats_experience_value', '0'),
           },
         ];
 

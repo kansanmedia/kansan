@@ -174,6 +174,11 @@ export function AdminSettings() {
     });
   };
 
+  const getSettingValue = (key: string, fallback: string) => {
+    const setting = settings.find((item) => item.key === key);
+    return setting ? setting.value : fallback;
+  };
+
   const moveItem = <T extends OrderedItem>(
     list: T[],
     setList: Dispatch<SetStateAction<T[]>>,
@@ -257,8 +262,12 @@ export function AdminSettings() {
   };
 
   const footerQuickLinkUrls = (() => {
-    const configured = parseFooterQuickLinks(settings.find((s) => s.key === 'footer_quick_links')?.value);
-    return configured.length > 0 ? configured : brandingDefaults.footerQuickLinks;
+    const quickLinksSetting = settings.find((item) => item.key === 'footer_quick_links');
+    if (!quickLinksSetting) {
+      return brandingDefaults.footerQuickLinks;
+    }
+
+    return parseFooterQuickLinks(quickLinksSetting.value);
   })();
 
   const footerLinkChoices = linkOptions.length > 0
@@ -396,7 +405,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Site Title</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'site_title')?.value || brandingDefaults.siteTitle}
+                      value={getSettingValue('site_title', brandingDefaults.siteTitle)}
                       onChange={(e) => updateSetting('site_title', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -405,17 +414,17 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'site_logo')?.value || brandingDefaults.logo}
+                      value={getSettingValue('site_logo', brandingDefaults.logo)}
                       onChange={(e) => updateSetting('site_logo', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
                     <ImageUpload
-                      value={settings.find(s => s.key === 'site_logo')?.value || brandingDefaults.logo}
+                      value={getSettingValue('site_logo', brandingDefaults.logo)}
                       onChange={(url) => updateSetting('site_logo', url)}
                       label="Logo Image"
-                      uploadName={settings.find(s => s.key === 'site_title')?.value || 'site-logo'}
+                      uploadName={getSettingValue('site_title', 'site-logo') || 'site-logo'}
                     />
                   </div>
                 </div>
@@ -424,24 +433,24 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Favicon URL</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'site_favicon')?.value || brandingDefaults.favicon}
+                      value={getSettingValue('site_favicon', brandingDefaults.favicon)}
                       onChange={(e) => updateSetting('site_favicon', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
                     <ImageUpload
-                      value={settings.find(s => s.key === 'site_favicon')?.value || brandingDefaults.favicon}
+                      value={getSettingValue('site_favicon', brandingDefaults.favicon)}
                       onChange={(url) => updateSetting('site_favicon', url)}
                       label="Favicon Image"
-                      uploadName={settings.find(s => s.key === 'site_title')?.value || 'site-favicon'}
+                      uploadName={getSettingValue('site_title', 'site-favicon') || 'site-favicon'}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Footer Copyright</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'footer_copyright')?.value || brandingDefaults.copyright}
+                      value={getSettingValue('footer_copyright', brandingDefaults.copyright)}
                       onChange={(e) => updateSetting('footer_copyright', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -469,7 +478,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
                     <textarea 
                       rows={3}
-                      value={settings.find(s => s.key === 'site_description')?.value || brandingDefaults.description}
+                      value={getSettingValue('site_description', brandingDefaults.description)}
                       onChange={(e) => updateSetting('site_description', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -478,7 +487,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Meta Keywords</label>
                     <textarea 
                       rows={2}
-                      value={settings.find(s => s.key === 'site_keywords')?.value || brandingDefaults.keywords}
+                      value={getSettingValue('site_keywords', brandingDefaults.keywords)}
                       onChange={(e) => updateSetting('site_keywords', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="comma separated values"
@@ -507,7 +516,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Footer Description</label>
                     <textarea
                       rows={3}
-                      value={settings.find(s => s.key === 'footer_description')?.value || brandingDefaults.footerDescription}
+                      value={getSettingValue('footer_description', brandingDefaults.footerDescription)}
                       onChange={(e) => updateSetting('footer_description', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -516,7 +525,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quick Links Title</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_quick_links_title')?.value || brandingDefaults.footerQuickLinksTitle}
+                      value={getSettingValue('footer_quick_links_title', brandingDefaults.footerQuickLinksTitle)}
                       onChange={(e) => updateSetting('footer_quick_links_title', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -585,7 +594,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subsidiaries Title</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_subsidiaries_title')?.value || brandingDefaults.footerSubsidiariesTitle}
+                      value={getSettingValue('footer_subsidiaries_title', brandingDefaults.footerSubsidiariesTitle)}
                       onChange={(e) => updateSetting('footer_subsidiaries_title', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -594,7 +603,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Contact Title</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_contact_title')?.value || brandingDefaults.footerContactTitle}
+                      value={getSettingValue('footer_contact_title', brandingDefaults.footerContactTitle)}
                       onChange={(e) => updateSetting('footer_contact_title', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -607,7 +616,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                     <textarea
                       rows={3}
-                      value={settings.find(s => s.key === 'footer_address')?.value || brandingDefaults.footerAddress}
+                      value={getSettingValue('footer_address', brandingDefaults.footerAddress)}
                       onChange={(e) => updateSetting('footer_address', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -616,7 +625,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_phone')?.value || brandingDefaults.footerPhone}
+                      value={getSettingValue('footer_phone', brandingDefaults.footerPhone)}
                       onChange={(e) => updateSetting('footer_phone', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -625,7 +634,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_email')?.value || brandingDefaults.footerEmail}
+                      value={getSettingValue('footer_email', brandingDefaults.footerEmail)}
                       onChange={(e) => updateSetting('footer_email', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -634,7 +643,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Admin Link Label</label>
                     <input
                       type="text"
-                      value={settings.find(s => s.key === 'footer_admin_label')?.value || brandingDefaults.footerAdminLabel}
+                      value={getSettingValue('footer_admin_label', brandingDefaults.footerAdminLabel)}
                       onChange={(e) => updateSetting('footer_admin_label', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -676,7 +685,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hero Title</label>
                     <textarea
                       rows={3}
-                      value={settings.find((s) => s.key === 'hero_title')?.value || heroDefaults.title}
+                      value={getSettingValue('hero_title', heroDefaults.title)}
                       onChange={(e) => updateSetting('hero_title', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -685,7 +694,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hero Description</label>
                     <textarea
                       rows={4}
-                      value={settings.find((s) => s.key === 'hero_description')?.value || heroDefaults.description}
+                      value={getSettingValue('hero_description', heroDefaults.description)}
                       onChange={(e) => updateSetting('hero_description', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -695,7 +704,7 @@ export function AdminSettings() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Primary Button Label</label>
                       <input
                         type="text"
-                        value={settings.find((s) => s.key === 'hero_primary_label')?.value || heroDefaults.primaryLabel}
+                        value={getSettingValue('hero_primary_label', heroDefaults.primaryLabel)}
                         onChange={(e) => updateSetting('hero_primary_label', e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
@@ -704,7 +713,7 @@ export function AdminSettings() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Primary Button Link</label>
                       <input
                         type="text"
-                        value={settings.find((s) => s.key === 'hero_primary_link')?.value || heroDefaults.primaryLink}
+                        value={getSettingValue('hero_primary_link', heroDefaults.primaryLink)}
                         onChange={(e) => updateSetting('hero_primary_link', e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         placeholder="/services"
@@ -714,7 +723,7 @@ export function AdminSettings() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Button Label</label>
                       <input
                         type="text"
-                        value={settings.find((s) => s.key === 'hero_secondary_label')?.value || heroDefaults.secondaryLabel}
+                        value={getSettingValue('hero_secondary_label', heroDefaults.secondaryLabel)}
                         onChange={(e) => updateSetting('hero_secondary_label', e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
@@ -723,7 +732,7 @@ export function AdminSettings() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Button Link</label>
                       <input
                         type="text"
-                        value={settings.find((s) => s.key === 'hero_secondary_link')?.value || heroDefaults.secondaryLink}
+                        value={getSettingValue('hero_secondary_link', heroDefaults.secondaryLink)}
                         onChange={(e) => updateSetting('hero_secondary_link', e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         placeholder="/contact"
@@ -735,17 +744,17 @@ export function AdminSettings() {
                 <div className="space-y-4">
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
                     <ImageUpload
-                      value={settings.find((s) => s.key === 'hero_image')?.value || heroDefaults.image}
+                      value={getSettingValue('hero_image', heroDefaults.image)}
                       onChange={(url) => updateSetting('hero_image', url)}
                       label="Hero Background Image"
-                      uploadName={settings.find((s) => s.key === 'hero_title')?.value || 'hero-background-image'}
+                      uploadName={getSettingValue('hero_title', 'hero-background-image') || 'hero-background-image'}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hero Image URL</label>
                     <input
                       type="text"
-                      value={settings.find((s) => s.key === 'hero_image')?.value || heroDefaults.image}
+                      value={getSettingValue('hero_image', heroDefaults.image)}
                       onChange={(e) => updateSetting('hero_image', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -773,7 +782,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subsidiaries Label</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_subsidiaries_label')?.value || 'Subsidiaries'}
+                      value={getSettingValue('stats_subsidiaries_label', 'Subsidiaries')}
                       onChange={(e) => updateSetting('stats_subsidiaries_label', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -782,7 +791,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Clients Label</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_clients_label')?.value || 'Clients'}
+                      value={getSettingValue('stats_clients_label', 'Clients')}
                       onChange={(e) => updateSetting('stats_clients_label', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -791,7 +800,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Employees Label</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_employees_label')?.value || 'Employees'}
+                      value={getSettingValue('stats_employees_label', 'Employees')}
                       onChange={(e) => updateSetting('stats_employees_label', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -800,7 +809,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Experience Label</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_experience_label')?.value || 'Years Experience'}
+                      value={getSettingValue('stats_experience_label', 'Years Experience')}
                       onChange={(e) => updateSetting('stats_experience_label', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -815,7 +824,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Employees Value</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_employees_value')?.value || '0'}
+                      value={getSettingValue('stats_employees_value', '0')}
                       onChange={(e) => updateSetting('stats_employees_value', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -824,7 +833,7 @@ export function AdminSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Experience Value</label>
                     <input 
                       type="text" 
-                      value={settings.find(s => s.key === 'stats_experience_value')?.value || '0'}
+                      value={getSettingValue('stats_experience_value', '0')}
                       onChange={(e) => updateSetting('stats_experience_value', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
