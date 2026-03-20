@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import type { Request, Response } from 'express';
-import apiRoutes from '../src/server/api';
+import apiRoutes from '../src/server/api.js';
 
 const uploadDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
 

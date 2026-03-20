@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import * as cheerio from 'cheerio';
-import { withDb } from './db';
+import { withDb } from './db.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
