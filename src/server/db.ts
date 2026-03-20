@@ -1,12 +1,44 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import fs from 'fs/promises';
+import path from 'path';
 
 dotenv.config();
 
 let pool: mysql.Pool | null = null;
+let migrationPromise: Promise<void> | null = null;
 
 const parseBoolean = (value: string | undefined) =>
   typeof value === 'string' && ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+
+async function ensureDatabaseReady(db: mysql.Pool) {
+  if (!migrationPromise) {
+    migrationPromise = (async () => {
+      const sqlFiles = ['database.sql', 'migration_v1.sql'];
+
+      for (const fileName of sqlFiles) {
+        const filePath = path.join(process.cwd(), fileName);
+
+        try {
+          const sql = await fs.readFile(filePath, 'utf8');
+          if (sql.trim()) {
+            await db.query(sql);
+          }
+        } catch (error: any) {
+          if (error?.code === 'ENOENT') {
+            continue;
+          }
+          throw error;
+        }
+      }
+    })().catch((error) => {
+      migrationPromise = null;
+      throw error;
+    });
+  }
+
+  await migrationPromise;
+}
 
 export function getDb() {
   if (!pool) {
@@ -45,6 +77,7 @@ export function getDb() {
 export const withDb = async (req: any, res: any, fn: (db: mysql.Pool) => Promise<any>) => {
   try {
     const db = getDb();
+    await ensureDatabaseReady(db);
     await fn(db);
   } catch (error: any) {
     if (error.message === 'DATABASE_NOT_CONFIGURED') {
