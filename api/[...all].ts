@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -8,7 +9,12 @@ const uploadDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.NEXT_PUBLIC_SITE_URL || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -18,4 +24,3 @@ app.use('/api', apiRoutes);
 export default function handler(req: Request, res: Response) {
   return app(req, res);
 }
-
