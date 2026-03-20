@@ -9,6 +9,7 @@ import { withDb } from './db';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
 
 const normalizeText = (value: unknown) => String(value ?? '').trim();
 
@@ -215,11 +216,10 @@ router.get('/debug', (req, res) => {
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const requestedBaseName = slugifyUploadName(req.body?.uploadName);
@@ -556,16 +556,15 @@ router.post('/admin/upload', authenticateToken, upload.single('image'), (req, re
 
 router.get('/admin/upload-library', authenticateToken, async (req, res) => {
   try {
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
+    if (!fs.existsSync(UPLOAD_DIR)) {
       return res.json([]);
     }
 
     const files = fs
-      .readdirSync(uploadDir, { withFileTypes: true })
+      .readdirSync(UPLOAD_DIR, { withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => {
-        const fullPath = path.join(uploadDir, entry.name);
+        const fullPath = path.join(UPLOAD_DIR, entry.name);
         return {
           name: entry.name,
           url: `/uploads/${entry.name}`,

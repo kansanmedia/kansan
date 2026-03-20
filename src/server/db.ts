@@ -5,16 +5,33 @@ dotenv.config();
 
 let pool: mysql.Pool | null = null;
 
+const parseBoolean = (value: string | undefined) =>
+  typeof value === 'string' && ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+
 export function getDb() {
   if (!pool) {
     if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_NAME) {
       throw new Error('DATABASE_NOT_CONFIGURED');
     }
+
+    const host = process.env.DB_HOST;
+    const port = Number(process.env.DB_PORT || 3306);
+    const useSsl = parseBoolean(process.env.DB_SSL);
+
+    if (
+      process.env.NODE_ENV === 'production' &&
+      ['localhost', '127.0.0.1', '::1'].includes(host)
+    ) {
+      throw new Error('DATABASE_LOCALHOST_UNREACHABLE');
+    }
+
     pool = mysql.createPool({
-      host: process.env.DB_HOST,
+      host,
+      port,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
@@ -35,6 +52,11 @@ export const withDb = async (req: any, res: any, fn: (db: mysql.Pool) => Promise
         error: 'Database not configured', 
         message: 'Please configure DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME in the environment variables.' 
       });
+    } else if (error.message === 'DATABASE_LOCALHOST_UNREACHABLE') {
+      res.status(503).json({
+        error: 'Database host unreachable from production',
+        message: 'DB_HOST is set to localhost/127.0.0.1, which Vercel cannot access. Use a public or hosted MySQL endpoint instead.',
+      });
     } else {
       console.error('Database error details:', JSON.stringify({
         message: error.message,
@@ -42,6 +64,8 @@ export const withDb = async (req: any, res: any, fn: (db: mysql.Pool) => Promise
         sqlState: error.sqlState,
         sqlMessage: error.sqlMessage,
         host: process.env.DB_HOST,
+        port: process.env.DB_PORT || '3306',
+        ssl: process.env.DB_SSL || 'false',
         user: process.env.DB_USER,
         db: process.env.DB_NAME
       }, null, 2));
