@@ -244,7 +244,7 @@ router.get('/homepage-data', async (req, res) => {
         db.execute('SELECT id, name, logo, website_url, testimonial FROM clients ORDER BY created_at DESC LIMIT 25').then(([rows]) => rows),
         db.execute('SELECT id, name, slug, section_title, section_description, item_label_singular, item_label_plural, is_enabled FROM content_collections WHERE is_enabled = 1').then(async ([colls]) => {
           const payload = [];
-          for (const coll of colls) {
+          for (const coll of colls as any[]) {
             const [items] = await db.execute('SELECT * FROM content_collection_items WHERE collection_id = ? AND is_enabled = 1 ORDER BY display_order ASC, id ASC', [coll.id]);
             payload.push({ collection: coll, items });
           }
@@ -606,12 +606,40 @@ router.post('/applications', async (req, res) => {
 // --- ADMIN PROTECTED ROUTES ---
 
 // Image Upload
-router.post('/admin/upload', authenticateToken, upload.single('image'), (req, res) => {
+router.post('/admin/upload', authenticateToken, upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+
+  try {
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64Image = fileBuffer.toString('base64');
+    
+    const formData = new URLSearchParams();
+    formData.append('key', '6d207e02198a847aa98d0a2a901485a5');
+    formData.append('action', 'upload');
+    formData.append('source', base64Image);
+    formData.append('format', 'json');
+    
+    const response = await fetch('https://freeimage.host/api/1/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const data = await response.json();
+    
+    if (data && data.image && data.image.url) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.json({ url: data.image.url });
+    } else {
+      throw new Error(data.error?.message || 'Failed to upload to external host');
+    }
+  } catch (error) {
+    console.error('Image upload error:', error);
+    // Fallback to local upload
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: imageUrl });
+  }
 });
 
 router.get('/admin/upload-library', authenticateToken, async (req, res) => {
