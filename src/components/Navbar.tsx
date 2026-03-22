@@ -9,9 +9,10 @@ import type { NavigationItem } from '../types/admin';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
   const [navItems, setNavItems] = useState<NavigationItem[]>([]);
 
   const getSettingValue = (key: string, fallback: string) => {
@@ -21,6 +22,10 @@ export function Navbar() {
 
     return settings[key];
   };
+
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [settings?.site_logo]);
 
   useEffect(() => {
     // Fetch dynamic navigation
@@ -55,19 +60,30 @@ export function Navbar() {
       });
   }, []);
 
+  const siteTitle = getSettingValue('site_title', 'Kansan Group');
+  const logoUrl = settings?.site_logo;
+  const showLogo = Boolean(logoUrl) && !logoLoadFailed;
+
   return (
     <nav className="premium-panel sticky top-0 z-50 border-b border-white/10">
       <div className="max-w-[80%] mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              {settings?.site_logo ? (
-                <img src={settings.site_logo} alt={getSettingValue('site_title', 'Kansan Group')} className="h-10 w-auto object-contain" />
+              {showLogo ? (
+                <img
+                  src={logoUrl}
+                  alt={siteTitle}
+                  className="h-10 w-auto object-contain"
+                  onError={() => setLogoLoadFailed(true)}
+                />
+              ) : settingsLoading ? (
+                <div className="h-10 w-28 rounded-md bg-white/5 animate-pulse" />
               ) : (
                 <>
                   <Building2 className="h-8 w-8 text-blue-600" />
                   <span className="text-shine text-xl font-bold tracking-tight">
-                    {getSettingValue('site_title', 'Kansan Group')}
+                    {siteTitle}
                   </span>
                 </>
               )}

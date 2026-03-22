@@ -6,9 +6,10 @@ import { fetchJson } from '../lib/api';
 import type { NavigationItem, Subsidiary } from '../types/admin';
 
 export function Footer() {
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
   const [navItems, setNavItems] = useState<NavigationItem[]>([]);
   const [subsidiaries, setSubsidiaries] = useState<Subsidiary[]>([]);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
 
   const hasSettingValue = (key: string) => Boolean(settings && Object.prototype.hasOwnProperty.call(settings, key));
   const getSettingValue = (key: string, fallback: string) => {
@@ -18,6 +19,10 @@ export function Footer() {
 
     return settings![key];
   };
+
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [settings?.site_logo]);
 
   useEffect(() => {
     fetchJson<NavigationItem[]>('/api/footer-links', {}, 'Failed to fetch footer links')
@@ -76,6 +81,9 @@ export function Footer() {
   const footerPhone = getSettingValue('footer_phone', '+1 (555) 123-4567');
   const footerEmail = getSettingValue('footer_email', 'info@kansangroup.com');
   const footerAdminLabel = getSettingValue('footer_admin_label', 'Admin Portal');
+  const siteTitle = getSettingValue('site_title', 'Kansan Group');
+  const logoUrl = settings?.site_logo;
+  const showLogo = Boolean(logoUrl) && !logoLoadFailed;
   const phoneHref = `tel:${footerPhone.replace(/[^\d+]/g, '')}`;
   const emailHref = `mailto:${footerEmail}`;
   
@@ -86,12 +94,19 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 border-b border-white/10 pb-10 md:grid-cols-4 mb-8">
           <div className="md:pr-4">
             <div className="flex items-center gap-2 mb-4">
-              {settings?.site_logo ? (
-                <img src={settings.site_logo} alt={getSettingValue('site_title', 'Kansan Group')} className="h-10 w-auto object-contain" />
+              {showLogo ? (
+                <img
+                  src={logoUrl}
+                  alt={siteTitle}
+                  className="h-10 w-auto object-contain"
+                  onError={() => setLogoLoadFailed(true)}
+                />
+              ) : settingsLoading ? (
+                <div className="h-10 w-28 rounded-md bg-white/5 animate-pulse" />
               ) : (
                 <>
                   <Building2 className="h-8 w-8 text-blue-400" />
-                  <span className="text-shine font-bold text-xl">{getSettingValue('site_title', 'Kansan Group')}</span>
+                  <span className="text-shine font-bold text-xl">{siteTitle}</span>
                 </>
               )}
             </div>

@@ -2,6 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X, Loader2, Images, Laptop2 } from 'lucide-react';
 import { adminJson } from '../lib/api';
 
+const allowedImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'];
+const isSupportedImageFile = (file: File) => {
+  const mimeType = file.type.toLowerCase();
+  const lowerName = file.name.toLowerCase();
+
+  return mimeType.startsWith('image/') || allowedImageExtensions.some((extension) => lowerName.endsWith(extension));
+};
+
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
@@ -34,9 +42,8 @@ export function ImageUpload({ value, onChange, label = 'Image', uploadName }: Im
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Basic validation
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+    if (!isSupportedImageFile(file)) {
+      setError('Please select a JPG, PNG, GIF, WEBP, SVG, or ICO image');
       return;
     }
 
@@ -174,7 +181,7 @@ export function ImageUpload({ value, onChange, label = 'Image', uploadName }: Im
                     Upload a file
                   </button>
                 </div>
-                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP, SVG, ICO up to 5MB</p>
               </>
             )}
           </div>

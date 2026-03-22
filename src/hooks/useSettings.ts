@@ -33,52 +33,83 @@ export interface SiteSettings {
   [key: string]: string;
 }
 
+let settingsCache: SiteSettings | null = null;
+let settingsPromise: Promise<SiteSettings> | null = null;
+
+const setMetaContent = (name: string, content?: string) => {
+  let metaTag = document.querySelector(`meta[name="${name}"]`);
+
+  if (!content) {
+    metaTag?.remove();
+    return;
+  }
+
+  if (!metaTag) {
+    metaTag = document.createElement('meta');
+    metaTag.setAttribute('name', name);
+    document.head.appendChild(metaTag);
+  }
+
+  metaTag.setAttribute('content', content);
+};
+
+const setFavicon = (href?: string) => {
+  const rels = ['icon', 'shortcut icon'];
+
+  if (!href) {
+    document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((node) => node.remove());
+    return;
+  }
+
+  rels.forEach((rel) => {
+    let favicon = document.querySelector(`link[rel="${rel}"]`);
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.setAttribute('rel', rel);
+      document.head.appendChild(favicon);
+    }
+
+    favicon.setAttribute('href', href);
+    if (href.endsWith('.ico')) {
+      favicon.setAttribute('type', 'image/x-icon');
+    } else {
+      favicon.removeAttribute('type');
+    }
+  });
+};
+
+const applyDocumentSettings = (data: SiteSettings) => {
+  document.title = data.site_title || 'Kansan Group';
+  setMetaContent('description', data.site_description);
+  setMetaContent('keywords', data.site_keywords);
+  setFavicon(data.site_favicon);
+};
+
+const loadSettings = () => {
+  if (settingsCache) {
+    return Promise.resolve(settingsCache);
+  }
+
+  if (!settingsPromise) {
+    settingsPromise = fetchJson<SiteSettings>('/api/settings', {}, 'Failed to fetch settings').then((data) => {
+      settingsCache = data;
+      return data;
+    });
+  }
+
+  return settingsPromise;
+};
+
 export function useSettings() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<SiteSettings | null>(settingsCache);
+  const [loading, setLoading] = useState(!settingsCache);
 
   useEffect(() => {
-    fetchJson<SiteSettings>('/api/settings', {}, 'Failed to fetch settings')
+    loadSettings()
       .then(data => {
         setSettings(data);
+        applyDocumentSettings(data);
         setLoading(false);
-        
-        // Update document metadata
-        if (data.site_title) {
-          document.title = data.site_title;
-        }
-        
-        const description = data.site_description;
-        if (description) {
-          let metaDesc = document.querySelector('meta[name="description"]');
-          if (!metaDesc) {
-            metaDesc = document.createElement('meta');
-            metaDesc.setAttribute('name', 'description');
-            document.head.appendChild(metaDesc);
-          }
-          metaDesc.setAttribute('content', description);
-        }
-
-        const keywords = data.site_keywords;
-        if (keywords) {
-          let metaKeywords = document.querySelector('meta[name="keywords"]');
-          if (!metaKeywords) {
-            metaKeywords = document.createElement('meta');
-            metaKeywords.setAttribute('name', 'keywords');
-            document.head.appendChild(metaKeywords);
-          }
-          metaKeywords.setAttribute('content', keywords);
-        }
-
-        if (data.site_favicon) {
-          let favicon = document.querySelector('link[rel="icon"]');
-          if (!favicon) {
-            favicon = document.createElement('link');
-            favicon.setAttribute('rel', 'icon');
-            document.head.appendChild(favicon);
-          }
-          favicon.setAttribute('href', data.site_favicon);
-        }
       })
       .catch(err => {
         console.error('Failed to fetch settings:', err);

@@ -18,19 +18,20 @@ const defaultSections = [
 ];
 
 export function Home() {
-  const [sections, setSections] = useState<any[]>(defaultSections);
+  const [sections, setSections] = useState<any[]>([]);
   const [services, setServices] = useState([]);
   const [portfolios, setPortfolios] = useState([]);
   const [subsidiaries, setSubsidiaries] = useState([]);
   const [clients, setClients] = useState([]);
   const [collections, setCollections] = useState<HomepageCollectionPayload[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [portfoliosLoading, setPortfoliosLoading] = useState(true);
   const [subsidiariesLoading, setSubsidiariesLoading] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
 
   const getSettingValue = (key: string, fallback: string) => {
     if (!settings || !Object.prototype.hasOwnProperty.call(settings, key)) {
@@ -43,13 +44,13 @@ export function Home() {
   useEffect(() => {
     fetchJson<any[]>('/api/homepage-sections', {}, 'Failed to fetch homepage sections')
       .then((data) => {
-        if (data.length > 0) {
-          setSections(data);
-        }
+        setSections(data.length > 0 ? data : defaultSections);
       })
       .catch((err) => {
         setDbError(err instanceof Error ? err.message : 'Database connection failed');
-      });
+        setSections(defaultSections);
+      })
+      .finally(() => setSectionsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -543,7 +544,11 @@ export function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {sections.length > 0 ? (
+      {settingsLoading || sectionsLoading ? (
+        <div className="flex min-h-[calc(100vh-72px)] items-center justify-center px-4 text-center text-gray-400">
+          Loading homepage...
+        </div>
+      ) : sections.length > 0 ? (
         sections.map(section => renderSection(section))
       ) : (
         <div className="py-32 text-center text-gray-500">

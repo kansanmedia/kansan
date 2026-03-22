@@ -20,6 +20,19 @@ const slugifyUploadName = (value: unknown) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
 
+const ALLOWED_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico']);
+const ALLOWED_UPLOAD_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+  'image/ico',
+  'application/octet-stream',
+]);
+
 const dedupeBy = <T,>(items: T[], getKey: (item: T) => string) => {
   const seen = new Set<string>();
   return items.filter((item) => {
@@ -234,13 +247,15 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    const extension = path.extname(file.originalname).toLowerCase();
+    const mimeType = file.mimetype.toLowerCase();
+    const extensionAllowed = ALLOWED_UPLOAD_EXTENSIONS.has(extension);
+    const mimeTypeAllowed = mimeType.startsWith('image/') || ALLOWED_UPLOAD_MIME_TYPES.has(mimeType);
+
+    if (extensionAllowed && mimeTypeAllowed) {
       return cb(null, true);
     }
-    cb(new Error('Only image files are allowed!'));
+    cb(new Error('Only JPG, PNG, GIF, WEBP, SVG, and ICO files are allowed!'));
   }
 });
 
