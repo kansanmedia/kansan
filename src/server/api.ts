@@ -226,6 +226,47 @@ router.get('/debug', (req, res) => {
   res.json({ status: 'ok', time: Date.now() });
 });
 
+router.get('/homepage-data', async (req, res) => {
+  await withDb(req, res, async (db) => {
+    try {
+      const [
+        sections,
+        services,
+        portfolios,
+        subsidiaries,
+        clients,
+        collectionsPayload
+      ] = await Promise.all([
+        db.execute('SELECT * FROM homepage_sections ORDER BY display_order ASC, id ASC').then(([rows]) => rows),
+        db.execute('SELECT title, slug, description FROM services ORDER BY created_at DESC LIMIT 25').then(([rows]) => rows),
+        db.execute('SELECT title, slug, description, image, client_name, website_url FROM portfolios ORDER BY created_at DESC LIMIT 25').then(([rows]) => rows),
+        db.execute('SELECT id, name, description, website_url, logo FROM subsidiaries ORDER BY created_at DESC LIMIT 25').then(([rows]) => rows),
+        db.execute('SELECT id, name, logo, website_url, testimonial FROM clients ORDER BY created_at DESC LIMIT 25').then(([rows]) => rows),
+        db.execute('SELECT id, name, slug, section_title, section_description, item_label_singular, item_label_plural, is_enabled FROM content_collections WHERE is_enabled = 1').then(async ([colls]) => {
+          const payload = [];
+          for (const coll of colls) {
+            const [items] = await db.execute('SELECT * FROM content_collection_items WHERE collection_id = ? AND is_enabled = 1 ORDER BY display_order ASC, id ASC', [coll.id]);
+            payload.push({ collection: coll, items });
+          }
+          return payload;
+        })
+      ]);
+
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+      res.json({
+        sections,
+        services,
+        portfolios,
+        subsidiaries,
+        clients,
+        collections: collectionsPayload
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to aggregate homepage data', details: error.message });
+    }
+  });
+});
+
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
