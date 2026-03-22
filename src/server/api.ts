@@ -239,7 +239,11 @@ const storage = multer.diskStorage({
     const originalBaseName = slugifyUploadName(path.parse(file.originalname).name);
     const baseName = requestedBaseName || originalBaseName || 'image';
     const uniqueSuffix = Date.now();
-    cb(null, `${baseName}-${uniqueSuffix}${path.extname(file.originalname).toLowerCase()}`);
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!ext) {
+      ext = file.mimetype === 'image/jpeg' ? '.jpg' : file.mimetype === 'image/png' ? '.png' : file.mimetype === 'image/gif' ? '.gif' : file.mimetype === 'image/webp' ? '.webp' : file.mimetype === 'image/svg+xml' ? '.svg' : '';
+    }
+    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
   }
 });
 

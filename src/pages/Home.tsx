@@ -42,42 +42,27 @@ export function Home() {
   };
 
   useEffect(() => {
-    fetchJson<any[]>('/api/homepage-sections', {}, 'Failed to fetch homepage sections')
+    fetchJson<any>('/api/homepage-data', {}, 'Failed to aggregate homepage data')
       .then((data) => {
-        setSections(data.length > 0 ? data : defaultSections);
+        setSections(data.sections.length > 0 ? data.sections : defaultSections);
+        setServices(data.services);
+        setPortfolios(data.portfolios);
+        setSubsidiaries(data.subsidiaries);
+        setClients(data.clients);
+        setCollections(data.collections);
       })
       .catch((err) => {
         setDbError(err instanceof Error ? err.message : 'Database connection failed');
         setSections(defaultSections);
       })
-      .finally(() => setSectionsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchJson<any[]>('/api/services', {}, 'Failed to fetch services')
-      .then((data) => setServices(data.slice(0, 25)))
-      .catch((err) => setDbError((current) => current || (err instanceof Error ? err.message : 'Database connection failed')))
-      .finally(() => setServicesLoading(false));
-
-    fetchJson<any[]>('/api/portfolios', {}, 'Failed to fetch portfolios')
-      .then((data) => setPortfolios(data.slice(0, 25)))
-      .catch((err) => setDbError((current) => current || (err instanceof Error ? err.message : 'Database connection failed')))
-      .finally(() => setPortfoliosLoading(false));
-
-    fetchJson<any[]>('/api/subsidiaries', {}, 'Failed to fetch subsidiaries')
-      .then((data) => setSubsidiaries(data.slice(0, 25)))
-      .catch((err) => setDbError((current) => current || (err instanceof Error ? err.message : 'Database connection failed')))
-      .finally(() => setSubsidiariesLoading(false));
-
-    fetchJson<any[]>('/api/clients', {}, 'Failed to fetch clients')
-      .then((data) => setClients(data.slice(0, 25)))
-      .catch((err) => setDbError((current) => current || (err instanceof Error ? err.message : 'Database connection failed')))
-      .finally(() => setClientsLoading(false));
-
-    fetchJson<HomepageCollectionPayload[]>('/api/collections/homepage', {}, 'Failed to fetch collections')
-      .then((data) => setCollections(data))
-      .catch((err) => setDbError((current) => current || (err instanceof Error ? err.message : 'Database connection failed')))
-      .finally(() => setCollectionsLoading(false));
+      .finally(() => {
+        setSectionsLoading(false);
+        setServicesLoading(false);
+        setPortfoliosLoading(false);
+        setSubsidiariesLoading(false);
+        setClientsLoading(false);
+        setCollectionsLoading(false);
+      });
   }, []);
 
   const heroTitle = getSettingValue('hero_title', 'Building the Future of Global Enterprise');
